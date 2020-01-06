@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <cache-path  path="Pictures" name="cache_pic" />
+    <cache-path  path="Cache" name="cache_photos" />
+    <external-path path="Pictures" name="camera_pictures" />
+    <external-path path="Photos" name="camera_photos" />
+    <root-path path="" name="root_photos" />
+</paths>
