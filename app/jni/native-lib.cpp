@@ -9,7 +9,6 @@
 #include <opencv2/opencv.hpp>
 using namespace cv;
 
-#define LOGE(...) ((void)__android_log_print(ANDROID_LOG_ERROR, "error", __VA_ARGS__))
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "debug", __VA_ARGS__))
 
 #define ASSERT(status, ret)     if (!(status)) { return ret; }
@@ -98,13 +97,14 @@ Java_com_yq_opencv_1image_OpencvImageUtil_ImageBlur(JNIEnv *env, jclass type, ji
     return result;
 }
 
+//马赛克
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_mosaic(JNIEnv *env, jclass type, jobject bitmap) {
     Mat src;
     BitmapToMat(env, bitmap, src);
     LOGD("nBitmapToMat: BitmapToMat finish");
-    int size = 8; //分成8 * 8 的小块 填充相同的颜色
+    int size = 10; //分成8 * 8 的小块 填充相同的颜色
     Mat mosaic = src.clone();
     for (int row = 0; row < src.rows - size; row += size) {
         for (int col = 0; col < src.cols - size; col += size) {
@@ -133,6 +133,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_blur(JNIEnv *env, jclass type, jobject
     return bitmap;
 }
 
+//灰度化
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_gray(JNIEnv *env, jclass type, jobject bitmap) {
@@ -140,8 +141,140 @@ Java_com_yq_opencv_1image_OpencvImageUtil_gray(JNIEnv *env, jclass type, jobject
     Mat src ;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
-    cv::cvtColor(src, src, COLOR_BGR2BGRA);
+    cv::cvtColor(src, src, COLOR_BGRA2GRAY);
     MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//浮雕
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_relief(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src ;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图像相关操作
+    /**
+    * [1,0]
+    * [0,-1]
+    */
+    Mat relief(src.size(), src.type());
+    for (int row = 1; row < src.rows; ++row) {
+        for (int col = 1; col < src.cols; ++col) {
+            Vec4b pix_p = src.at<Vec4b>(row - 1, col - 1);
+            Vec4b pix_n = src.at<Vec4b>(row, col);
+            //b g r a
+            relief.at<Vec4b>(row, col)[0] = static_cast<uchar>(pix_p[0] - pix_n[0] + 128);
+            relief.at<Vec4b>(row, col)[1] = static_cast<uchar>(pix_p[1] - pix_n[1] + 128);
+            relief.at<Vec4b>(row, col)[2] = static_cast<uchar>(pix_p[2] - pix_n[2] + 128);
+        }
+    }
+    MatToBitmap(env, relief, bitmap);
+    return bitmap;
+
+}
+
+//油画
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_oilPaiting(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src ;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图像相关操作
+    Mat gray;
+    cvtColor(src, gray, COLOR_BGRA2GRAY);
+
+    Mat res = src.clone();
+
+    const int g_size = 5;
+    const int t_size = 8;
+
+    for (int row = 0; row < src.rows - t_size; ++row) {
+        for (int col = 0; col < src.cols - t_size; ++col) {
+            //统计灰度等级
+            int grade[g_size + 1] = {0};
+            int b[g_size + 1] = {0};
+            int g[g_size + 1] = {0};
+            int r[g_size + 1] = {0};
+            for (int t_row = 0; t_row < t_size; ++t_row) {
+                for (int t_col = 0; t_col < t_size; ++t_col) {
+
+                    uchar gray_value = gray.at<uchar>(row + t_row, col + t_col);
+                    int grade_index = gray_value / (255 / g_size);
+                    grade[grade_index] += 1;
+
+                    b[grade_index] += src.at<Vec4b>(row + t_row, col + t_col)[0];
+                    g[grade_index] += src.at<Vec4b>(row + t_row, col + t_col)[1];
+                    r[grade_index] += src.at<Vec4b>(row + t_row, col + t_col)[2];
+
+                }
+
+            }
+
+            //找出最多落入像素最多的一个等级
+            int max_index = 0;
+            int max = grade[0];
+            for (int index = 1; index <= g_size; ++index) {
+                if (grade[index] > max) {
+                    max_index = index;
+                    max = grade[index];
+                }
+            }
+
+            //求取这个等级的平均值
+            res.at<Vec4b>(row, col)[0] = b[max_index] / max;
+            res.at<Vec4b>(row, col)[1] = g[max_index] / max;
+            res.at<Vec4b>(row, col)[2] = r[max_index] / max;
+        }
+    }
+    MatToBitmap(env, res, bitmap);
+    return bitmap;
+
+}
+
+//轮廓图
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_canary(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src ;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图像相关操作
+    cv::cvtColor(src, src, COLOR_BGRA2GRAY);
+    cv::GaussianBlur(src,src,Size(15, 15),0,0,BORDER_DEFAULT);
+    //调用Canny 方法实现边缘检测
+    cv::Canny(src,src,50,50,3,false);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//毛玻璃
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_frostedGlass(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+
+    int size = 5; //分成5 * 5的小块 在小块中随机取值填充
+
+    Mat frostedGlass = src.clone();
+
+    RNG rng((unsigned) time(NULL));
+
+    for (int row = 0; row < src.rows - size; ++row) {
+        for (int col = 0; col < src.cols - size; ++col) {
+            int roandnumber = rng.uniform(0, size);
+            frostedGlass.at<Vec4b>(row, col)[0] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[0];
+            frostedGlass.at<Vec4b>(row, col)[1] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[1];
+            frostedGlass.at<Vec4b>(row, col)[2] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[2];
+        }
+    }
+
+    MatToBitmap(env, frostedGlass, bitmap);
     return bitmap;
 
 }

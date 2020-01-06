@@ -86,18 +86,19 @@ public class MainActivity extends AppCompatActivity {
                         resultBit = OpencvImageUtil.gray(src);
                         break;
                     case 2://浮雕
-//                        resultBit = OpencvUtil.relief(src);
+                        resultBit = OpencvImageUtil.relief(src);
                         break;
                     case 3://油画
+                        resultBit = OpencvImageUtil.oilPaiting(src);
                         break;
                     case 4://轮廓图
-//                        resultBit = OpencvUtil.canary(src);
+                        resultBit = OpencvImageUtil.canary(src);
                         break;
                     case 5://模糊
                         resultBit = OpencvImageUtil.blur(src);
                         break;
-                    case 6://不规则模糊
-//                        resultBit = OpencvUtil.IrregularBlur(src);
+                    case 6://毛玻璃
+                        resultBit = OpencvImageUtil.frostedGlass(src);
                         break;
                     case 7://马赛克
                         resultBit = OpencvImageUtil.mosaic(src);
@@ -139,7 +140,6 @@ public class MainActivity extends AppCompatActivity {
                         if (result != null && result.size() > 0) {
                             mPicFilePath = result.get(0).getPath();
                             imageView.setImageBitmap(BitmapFactory.decodeFile(mPicFilePath));
-                            imageView2 .setImageBitmap(doImageBlur(BitmapFactory.decodeFile(mPicFilePath)));
 
                         }
                     }
