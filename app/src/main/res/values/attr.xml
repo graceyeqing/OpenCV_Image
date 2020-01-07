@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--自定义ximageview-->
+    <declare-styleable name="XImageView">
+        <attr name="borderRadius" format="dimension" />
+        <attr name="type">
+            <enum name="circle" value="0" />
+            <enum name="round" value="1" />
+        </attr>
+        <attr name="zoomSize" format="float" />
+        <attr name="isNeedStroke" format="boolean" />
+        <attr name="strokeColor" format="color" />
+    </declare-styleable>
+
+</resources>

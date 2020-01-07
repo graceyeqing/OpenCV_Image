@@ -7,6 +7,7 @@
 #include <android/bitmap.h>
 #include <android/log.h>
 #include <opencv2/opencv.hpp>
+
 using namespace cv;
 
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "debug", __VA_ARGS__))
@@ -14,15 +15,16 @@ using namespace cv;
 #define ASSERT(status, ret)     if (!(status)) { return ret; }
 #define ASSERT_FALSE(status)    ASSERT(status, false)
 
-bool BitmapToMat(JNIEnv * env, jobject obj_bitmap, cv::Mat & matrix) {
-    void * bitmapPixels;                                            // 保存图片像素数据
+bool BitmapToMat(JNIEnv *env, jobject obj_bitmap, cv::Mat &matrix) {
+    void *bitmapPixels;                                            // 保存图片像素数据
     AndroidBitmapInfo bitmapInfo;                                   // 保存图片参数
 
-    ASSERT_FALSE( AndroidBitmap_getInfo(env, obj_bitmap, &bitmapInfo) >= 0);        // 获取图片参数
-    ASSERT_FALSE( bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888
-                  || bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGB_565 );          // 只支持 ARGB_8888 和 RGB_565
-    ASSERT_FALSE( AndroidBitmap_lockPixels(env, obj_bitmap, &bitmapPixels) >= 0 );  // 获取图片像素（锁定内存块）
-    ASSERT_FALSE( bitmapPixels );
+    ASSERT_FALSE(AndroidBitmap_getInfo(env, obj_bitmap, &bitmapInfo) >= 0);        // 获取图片参数
+    ASSERT_FALSE(bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888
+                 || bitmapInfo.format ==
+                    ANDROID_BITMAP_FORMAT_RGB_565);          // 只支持 ARGB_8888 和 RGB_565
+    ASSERT_FALSE(AndroidBitmap_lockPixels(env, obj_bitmap, &bitmapPixels) >= 0);  // 获取图片像素（锁定内存块）
+    ASSERT_FALSE(bitmapPixels);
 
     if (bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888) {
         cv::Mat tmp(bitmapInfo.height, bitmapInfo.width, CV_8UC4, bitmapPixels);    // 建立临时 mat
@@ -36,35 +38,52 @@ bool BitmapToMat(JNIEnv * env, jobject obj_bitmap, cv::Mat & matrix) {
     return true;
 }
 
-bool MatToBitmap(JNIEnv * env, cv::Mat & matrix, jobject obj_bitmap) {
-    void * bitmapPixels;                                            // 保存图片像素数据
+bool MatToBitmap(JNIEnv *env, cv::Mat &matrix, jobject obj_bitmap) {
+    void *bitmapPixels;                                            // 保存图片像素数据
     AndroidBitmapInfo bitmapInfo;                                   // 保存图片参数
 
-    ASSERT_FALSE( AndroidBitmap_getInfo(env, obj_bitmap, &bitmapInfo) >= 0);        // 获取图片参数
-    ASSERT_FALSE( bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888
-                  || bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGB_565 );          // 只支持 ARGB_8888 和 RGB_565
-    ASSERT_FALSE( matrix.dims == 2
-                  && bitmapInfo.height == (uint32_t)matrix.rows
-                  && bitmapInfo.width == (uint32_t)matrix.cols );                   // 必须是 2 维矩阵，长宽一致
-    ASSERT_FALSE( matrix.type() == CV_8UC1 || matrix.type() == CV_8UC3 || matrix.type() == CV_8UC4 );
-    ASSERT_FALSE( AndroidBitmap_lockPixels(env, obj_bitmap, &bitmapPixels) >= 0 );  // 获取图片像素（锁定内存块）
-    ASSERT_FALSE( bitmapPixels );
+    ASSERT_FALSE(AndroidBitmap_getInfo(env, obj_bitmap, &bitmapInfo) >= 0);        // 获取图片参数
+    ASSERT_FALSE(bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888
+                 || bitmapInfo.format ==
+                    ANDROID_BITMAP_FORMAT_RGB_565);          // 只支持 ARGB_8888 和 RGB_565
+    ASSERT_FALSE(matrix.dims == 2
+                 && bitmapInfo.height == (uint32_t) matrix.rows
+                 && bitmapInfo.width == (uint32_t) matrix.cols);                   // 必须是 2 维矩阵，长宽一致
+    ASSERT_FALSE(matrix.type() == CV_8UC1 || matrix.type() == CV_8UC3 || matrix.type() == CV_8UC4);
+    ASSERT_FALSE(AndroidBitmap_lockPixels(env, obj_bitmap, &bitmapPixels) >= 0);  // 获取图片像素（锁定内存块）
+    ASSERT_FALSE(bitmapPixels);
 
     if (bitmapInfo.format == ANDROID_BITMAP_FORMAT_RGBA_8888) {
         cv::Mat tmp(bitmapInfo.height, bitmapInfo.width, CV_8UC4, bitmapPixels);
         switch (matrix.type()) {
-            case CV_8UC1:   cv::cvtColor(matrix, tmp, cv::COLOR_GRAY2RGBA);     break;
-            case CV_8UC3:   cv::cvtColor(matrix, tmp, cv::COLOR_RGB2RGBA);      break;
-            case CV_8UC4:   matrix.copyTo(tmp);                                 break;
-            default:        AndroidBitmap_unlockPixels(env, obj_bitmap);        return false;
+            case CV_8UC1:
+                cv::cvtColor(matrix, tmp, cv::COLOR_GRAY2RGBA);
+                break;
+            case CV_8UC3:
+                cv::cvtColor(matrix, tmp, cv::COLOR_RGB2RGBA);
+                break;
+            case CV_8UC4:
+                matrix.copyTo(tmp);
+                break;
+            default:
+                AndroidBitmap_unlockPixels(env, obj_bitmap);
+                return false;
         }
     } else {
         cv::Mat tmp(bitmapInfo.height, bitmapInfo.width, CV_8UC2, bitmapPixels);
         switch (matrix.type()) {
-            case CV_8UC1:   cv::cvtColor(matrix, tmp, cv::COLOR_GRAY2BGR565);   break;
-            case CV_8UC3:   cv::cvtColor(matrix, tmp, cv::COLOR_RGB2BGR565);    break;
-            case CV_8UC4:   cv::cvtColor(matrix, tmp, cv::COLOR_RGBA2BGR565);   break;
-            default:        AndroidBitmap_unlockPixels(env, obj_bitmap);        return false;
+            case CV_8UC1:
+                cv::cvtColor(matrix, tmp, cv::COLOR_GRAY2BGR565);
+                break;
+            case CV_8UC3:
+                cv::cvtColor(matrix, tmp, cv::COLOR_RGB2BGR565);
+                break;
+            case CV_8UC4:
+                cv::cvtColor(matrix, tmp, cv::COLOR_RGBA2BGR565);
+                break;
+            default:
+                AndroidBitmap_unlockPixels(env, obj_bitmap);
+                return false;
         }
     }
     AndroidBitmap_unlockPixels(env, obj_bitmap);                // 解锁
@@ -81,13 +100,13 @@ Java_com_yq_opencv_1image_OpencvImageUtil_ImageBlur(JNIEnv *env, jclass type, ji
         return 0;
     }
     Mat imgData(h, w, CV_8UC4, (unsigned char *) cbuf);
-    cv::cvtColor(imgData,imgData,COLOR_BGRA2BGR);
+    cv::cvtColor(imgData, imgData, COLOR_BGRA2BGR);
 
     //这里进行图像相关操作
     blur(imgData, imgData, Size(20, 20));
 
-   //对图像相关操作完毕
-    cv::cvtColor(imgData,imgData,COLOR_BGR2BGRA);
+    //对图像相关操作完毕
+    cv::cvtColor(imgData, imgData, COLOR_BGR2BGRA);
     //这里传回int数组。
     uchar *ptr = imgData.data;
     int size = w * h;
@@ -125,7 +144,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_mosaic(JNIEnv *env, jclass type, jobje
 extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_blur(JNIEnv *env, jclass type, jobject bitmap) {
-    Mat src ;
+    Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
     blur(src, src, Size(51, 51));
@@ -138,7 +157,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_gray(JNIEnv *env, jclass type, jobject bitmap) {
 
-    Mat src ;
+    Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
     cv::cvtColor(src, src, COLOR_BGRA2GRAY);
@@ -152,7 +171,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_relief(JNIEnv *env, jclass type, jobject bitmap) {
 
-    Mat src ;
+    Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
     /**
@@ -180,7 +199,7 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_oilPaiting(JNIEnv *env, jclass type, jobject bitmap) {
 
-    Mat src ;
+    Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
     Mat gray;
@@ -239,13 +258,13 @@ extern "C"
 JNIEXPORT jobject JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil_canary(JNIEnv *env, jclass type, jobject bitmap) {
 
-    Mat src ;
+    Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图像相关操作
     cv::cvtColor(src, src, COLOR_BGRA2GRAY);
-    cv::GaussianBlur(src,src,Size(15, 15),0,0,BORDER_DEFAULT);
+    cv::GaussianBlur(src, src, Size(3, 3), 0, 0, BORDER_DEFAULT);
     //调用Canny 方法实现边缘检测
-    cv::Canny(src,src,50,50,3,false);
+    cv::Canny(src, src, 50, 150, 3, false);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
@@ -268,13 +287,144 @@ Java_com_yq_opencv_1image_OpencvImageUtil_frostedGlass(JNIEnv *env, jclass type,
     for (int row = 0; row < src.rows - size; ++row) {
         for (int col = 0; col < src.cols - size; ++col) {
             int roandnumber = rng.uniform(0, size);
-            frostedGlass.at<Vec4b>(row, col)[0] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[0];
-            frostedGlass.at<Vec4b>(row, col)[1] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[1];
-            frostedGlass.at<Vec4b>(row, col)[2] = src.at<Vec4b>(row + roandnumber, col + roandnumber)[2];
+            frostedGlass.at<Vec4b>(row, col)[0] = src.at<Vec4b>(row + roandnumber,
+                                                                col + roandnumber)[0];
+            frostedGlass.at<Vec4b>(row, col)[1] = src.at<Vec4b>(row + roandnumber,
+                                                                col + roandnumber)[1];
+            frostedGlass.at<Vec4b>(row, col)[2] = src.at<Vec4b>(row + roandnumber,
+                                                                col + roandnumber)[2];
         }
     }
 
     MatToBitmap(env, frostedGlass, bitmap);
+    return bitmap;
+
+}
+
+//直方图均衡化
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_equalizeHist(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    Mat imgRGB[3];
+    split(src, imgRGB);
+    //针对每个通道进行直方图均衡化
+    for (int i = 0; i < 3; i++) {
+        equalizeHist(imgRGB[i], imgRGB[i]);
+    }
+    //合并图像
+    merge(imgRGB, 3, src);
+
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+}
+
+//图像增强，拉普拉斯算子
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_lapulasi(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    cv::Laplacian(src,src,CV_8UC3);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+}
+
+//图像翻转
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_flip(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    //0倒过来，1翻转，-1倒过来加翻转
+    cv::flip(src,src,-1);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//图像叠加
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_add(JNIEnv *env, jclass type, jobject bitmap,
+                                              jobject bitmap2) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    Mat src2;
+    BitmapToMat(env, bitmap2, src2);
+    //这里进行图片的处理
+    addWeighted(src,0.7,src2,0.3,0.0,src);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//图像膨胀
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_dilate(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    Mat *kernel = new Mat();
+    dilate(src,src,*kernel);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//图像侵蚀
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_erode(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    Mat *kernel = new Mat();
+    erode(src,src,*kernel);
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+//图像扭曲
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil_warping(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    Point2f srcTri[3];
+    Point2f dstTri[3];
+
+    Mat warp_mat(2, 3, CV_32FC1);
+    //设置三个点来计算仿射变换
+    srcTri[0] = Point2f(0, 0);
+    srcTri[1] = Point2f(src.cols - 1, 0);
+    srcTri[2] = Point2f(0, src.rows - 1);
+
+    dstTri[0] = Point2f(src.cols*0.0, src.rows*0.33);
+    dstTri[1] = Point2f(src.cols*0.85, src.rows*0.25);
+    dstTri[2] = Point2f(src.cols*0.15, src.rows*0.7);
+
+    //计算仿射变换矩阵
+    warp_mat = getAffineTransform(srcTri, dstTri);
+   //创建仿射变换目标图像与原图像尺寸类型相同
+    Mat warp_dstImage = Mat::zeros(src.rows, src.cols, src.type());
+    cv::warpAffine(src,src,warp_mat,warp_dstImage.size());
+
+    MatToBitmap(env, src, bitmap);
     return bitmap;
 
 }
