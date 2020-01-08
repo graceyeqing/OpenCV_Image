@@ -1,47 +1,44 @@
 package com.yq.opencv_image;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
-import com.bumptech.glide.Glide;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.yanzhenjie.album.Action;
 import com.yanzhenjie.album.Album;
 import com.yanzhenjie.album.AlbumFile;
 import com.yq.opencv_image.utils.FileUtil;
-import com.yq.opencv_image.widget.XImageView;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.ArrayList;
 
-import static com.bumptech.glide.request.RequestOptions.centerCropTransform;
-
-public class MainActivity extends AppCompatActivity {
+public class OtherActivity extends AppCompatActivity {
     private String TAG = "yeqing";
     private String mPicFilePath;
     private ImageView imageView;
     private ImageView imageView2;
-    private final int PHOTO_REQUEST = 20;
+    private final int PHOTO_REQUEST = 0;
     private RadioGroup radioGroup,radioGroup2;
     private boolean isGroup2;
+    private File mCascadeFile;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -66,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_other);
         // Example of a call to a native method
         imageView = findViewById(R.id.image);
         imageView2 = findViewById(R.id.image2);
@@ -81,13 +78,6 @@ public class MainActivity extends AppCompatActivity {
 
         radioGroup = findViewById(R.id.radiogroup);
         radioGroup2 = findViewById(R.id.radiogroup2);
-        Button actionButton = findViewById(R.id.btn_action);
-        actionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this,OtherActivity.class));
-            }
-        });
     }
 
     public void onClickView(View view){
@@ -96,13 +86,17 @@ public class MainActivity extends AppCompatActivity {
         if (!TextUtils.isEmpty(mPicFilePath)) {
             src = FileUtil.picFileToBitmap(mPicFilePath);
         } else {
-            src = FileUtil.resourceToBitmap(MainActivity.this, R.mipmap.test);
+            src = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
         }
         int id = view.getId();
         switch (id){
             case R.id.radio1:
                 //灰度化
-                resultBit = OpencvImageUtil.gray(src);
+                copyCascadeFile();
+                if (mCascadeFile != null) {
+                    OpencvImageUtil2.loadCascade(mCascadeFile.getAbsolutePath());
+                }
+                resultBit = OpencvImageUtil2.detectFace(src);
                 isGroup2 = false;
                 break;
             case R.id.radio2:
@@ -152,9 +146,9 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case R.id.radio11:
                 //图像叠加
-                src = FileUtil.resourceToBitmap(MainActivity.this, R.mipmap.test);
-                Bitmap src2 = FileUtil.resourceToBitmap(MainActivity.this, R.mipmap.test2);
-                resultBit = OpencvImageUtil.add(src,src2);
+                src = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
+                Bitmap src2 = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
+                resultBit = OpencvImageUtil.add(src,src);
                 isGroup2 = true;
                 break;
             case R.id.radio12:
@@ -182,7 +176,28 @@ public class MainActivity extends AppCompatActivity {
         if (resultBit != null) {
             imageView2.setImageBitmap(resultBit);
         } else {
-            Toast.makeText(MainActivity.this, "处理出错", Toast.LENGTH_SHORT).show();
+            Toast.makeText(OtherActivity.this, "处理出错", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void copyCascadeFile(){
+        try {
+            // load cascade file from application resources
+            InputStream inputStream = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+            File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
+            mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
+            if (mCascadeFile.exists()) return;
+                    FileOutputStream os = new FileOutputStream(mCascadeFile);
+
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                os.write(buffer, 0, bytesRead);
+            }
+            inputStream.close();
+            os.close();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -202,15 +217,15 @@ public class MainActivity extends AppCompatActivity {
     private void selectImage() {
 //        String imageName = String.valueOf(System.currentTimeMillis());
 //        mPicFilePath = Environment.getExternalStorageDirectory() + "/headImage" + imageName + ".jpg";
-//        File file2 = new File(mPicFilePath);
-//        if (!file2.exists()) {
-//            file2.getParentFile().mkdirs();
+//        File file = new File(mPicFilePath);
+//        if (!file.exists()) {
+//            file.getParentFile().mkdirs();
 //        } else {
-//            file2.delete();
+//            file.delete();
 //        }
-//        Intent intent2 = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-//        intent2.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
-//        startActivityForResult(intent2, PHOTO_REQUEST);
+//        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+//        intent.setDataAndType(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, "image/*");
+//        startActivityForResult(intent, PHOTO_REQUEST);
 
         Album.image(this)
                 .singleChoice() // Multi-Mode, Single-Mode: singleChoice().

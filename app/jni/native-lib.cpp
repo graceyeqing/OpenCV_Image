@@ -9,11 +9,14 @@
 #include <opencv2/opencv.hpp>
 
 using namespace cv;
+using namespace std;
 
 #define LOGD(...) ((void)__android_log_print(ANDROID_LOG_DEBUG, "debug", __VA_ARGS__))
 
 #define ASSERT(status, ret)     if (!(status)) { return ret; }
 #define ASSERT_FALSE(status)    ASSERT(status, false)
+
+ CascadeClassifier cascadeClassifier;
 
 bool BitmapToMat(JNIEnv *env, jobject obj_bitmap, cv::Mat &matrix) {
     void *bitmapPixels;                                            // 保存图片像素数据
@@ -427,4 +430,49 @@ Java_com_yq_opencv_1image_OpencvImageUtil_warping(JNIEnv *env, jclass type, jobj
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
+}
+//人脸检测
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectFace(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    // 处理灰度 opencv 处理灰度图, 提高效率，一般所有的操作都会对其进行灰度处理
+    Mat gray_mat;
+    cvtColor(src,gray_mat,COLOR_BGRA2GRAY);
+    // 再次处理 直方均衡补偿
+    Mat equalize_mat;
+    equalizeHist(gray_mat,equalize_mat);
+
+    // 识别人脸，也可以直接用 彩色图去做,识别人脸要加载人脸分类器文件
+    std::vector<Rect> faces;
+    cascadeClassifier.detectMultiScale(equalize_mat,faces,1.1,5);
+//    LOGD("人脸个数：%d",faces.size());
+    if (faces.size() != 0) {
+        for(Rect faceRect : faces) {
+            // 在人脸部分画个图
+            rectangle(src,faceRect,Scalar(255,155,155),8);
+            // 把 mat 我们又放到 bitmap 里面
+            MatToBitmap(env, src, bitmap);
+            // 保存人脸信息
+            // 保存人脸信息 Mat , 图片 jpg
+            Mat face_info_mat(equalize_mat, faceRect);
+            // 保存 face_info_mat
+        }
+    }
+
+    return bitmap;
+
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_loadCascade(JNIEnv *env, jclass type,
+                                                       jstring filePath_) {
+    const char *filePath = env->GetStringUTFChars(filePath_, 0);
+    cascadeClassifier.load(filePath);
+    LOGD("加载分类器文件成功");
+    env->ReleaseStringUTFChars(filePath_, filePath);
 }
