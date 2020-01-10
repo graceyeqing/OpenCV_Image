@@ -223,6 +223,8 @@ public class MainActivity extends AppCompatActivity {
                         if (result != null && result.size() > 0) {
                             mPicFilePath = result.get(0).getPath();
                             imageView.setImageBitmap(BitmapFactory.decodeFile(mPicFilePath));
+                            radioGroup.clearCheck();
+                            radioGroup2.clearCheck();
 
                         }
                     }

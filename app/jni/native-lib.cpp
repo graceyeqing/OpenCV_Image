@@ -7,6 +7,8 @@
 #include <android/bitmap.h>
 #include <android/log.h>
 #include <opencv2/opencv.hpp>
+#include <random>
+#include <math.h>
 
 using namespace cv;
 using namespace std;
@@ -16,7 +18,7 @@ using namespace std;
 #define ASSERT(status, ret)     if (!(status)) { return ret; }
 #define ASSERT_FALSE(status)    ASSERT(status, false)
 
- CascadeClassifier cascadeClassifier;
+CascadeClassifier cascadeClassifier;
 
 bool BitmapToMat(JNIEnv *env, jobject obj_bitmap, cv::Mat &matrix) {
     void *bitmapPixels;                                            // 保存图片像素数据
@@ -333,7 +335,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_lapulasi(JNIEnv *env, jclass type, job
     Mat src;
     BitmapToMat(env, bitmap, src);
     //这里进行图片的处理
-    cv::Laplacian(src,src,CV_8UC3);
+    cv::Laplacian(src, src, CV_8UC3);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 }
@@ -347,7 +349,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_flip(JNIEnv *env, jclass type, jobject
     BitmapToMat(env, bitmap, src);
     //这里进行图片的处理
     //0倒过来，1翻转，-1倒过来加翻转
-    cv::flip(src,src,-1);
+    cv::flip(src, src, -1);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
@@ -364,7 +366,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_add(JNIEnv *env, jclass type, jobject 
     Mat src2;
     BitmapToMat(env, bitmap2, src2);
     //这里进行图片的处理
-    addWeighted(src,0.7,src2,0.3,0.0,src);
+    addWeighted(src, 0.7, src2, 0.3, 0.0, src);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
@@ -379,7 +381,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_dilate(JNIEnv *env, jclass type, jobje
     BitmapToMat(env, bitmap, src);
     //这里进行图片的处理
     Mat *kernel = new Mat();
-    dilate(src,src,*kernel);
+    dilate(src, src, *kernel);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
@@ -394,7 +396,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil_erode(JNIEnv *env, jclass type, jobjec
     BitmapToMat(env, bitmap, src);
     //这里进行图片的处理
     Mat *kernel = new Mat();
-    erode(src,src,*kernel);
+    erode(src, src, *kernel);
     MatToBitmap(env, src, bitmap);
     return bitmap;
 
@@ -417,15 +419,15 @@ Java_com_yq_opencv_1image_OpencvImageUtil_warping(JNIEnv *env, jclass type, jobj
     srcTri[1] = Point2f(src.cols - 1, 0);
     srcTri[2] = Point2f(0, src.rows - 1);
 
-    dstTri[0] = Point2f(src.cols*0.0, src.rows*0.33);
-    dstTri[1] = Point2f(src.cols*0.85, src.rows*0.25);
-    dstTri[2] = Point2f(src.cols*0.15, src.rows*0.7);
+    dstTri[0] = Point2f(src.cols * 0.0, src.rows * 0.33);
+    dstTri[1] = Point2f(src.cols * 0.85, src.rows * 0.25);
+    dstTri[2] = Point2f(src.cols * 0.15, src.rows * 0.7);
 
     //计算仿射变换矩阵
     warp_mat = getAffineTransform(srcTri, dstTri);
-   //创建仿射变换目标图像与原图像尺寸类型相同
+    //创建仿射变换目标图像与原图像尺寸类型相同
     Mat warp_dstImage = Mat::zeros(src.rows, src.cols, src.type());
-    cv::warpAffine(src,src,warp_mat,warp_dstImage.size());
+    cv::warpAffine(src, src, warp_mat, warp_dstImage.size());
 
     MatToBitmap(env, src, bitmap);
     return bitmap;
@@ -441,19 +443,19 @@ Java_com_yq_opencv_1image_OpencvImageUtil2_detectFace(JNIEnv *env, jclass type, 
     //这里进行图片的处理
     // 处理灰度 opencv 处理灰度图, 提高效率，一般所有的操作都会对其进行灰度处理
     Mat gray_mat;
-    cvtColor(src,gray_mat,COLOR_BGRA2GRAY);
+    cvtColor(src, gray_mat, COLOR_BGRA2GRAY);
     // 再次处理 直方均衡补偿
     Mat equalize_mat;
-    equalizeHist(gray_mat,equalize_mat);
+    equalizeHist(gray_mat, equalize_mat);
 
     // 识别人脸，也可以直接用 彩色图去做,识别人脸要加载人脸分类器文件
     std::vector<Rect> faces;
-    cascadeClassifier.detectMultiScale(equalize_mat,faces,1.1,5);
-//    LOGD("人脸个数：%d",faces.size());
+    cascadeClassifier.detectMultiScale(equalize_mat, faces, 1.1, 5);
+    LOGD("人脸个数：%d", faces.size());
     if (faces.size() != 0) {
-        for(Rect faceRect : faces) {
+        for (Rect faceRect : faces) {
             // 在人脸部分画个图
-            rectangle(src,faceRect,Scalar(255,155,155),8);
+            rectangle(src, faceRect, Scalar(255, 155, 155), 8);
             // 把 mat 我们又放到 bitmap 里面
             MatToBitmap(env, src, bitmap);
             // 保存人脸信息
@@ -467,6 +469,7 @@ Java_com_yq_opencv_1image_OpencvImageUtil2_detectFace(JNIEnv *env, jclass type, 
 
 }
 
+//加载分类器文件
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_yq_opencv_1image_OpencvImageUtil2_loadCascade(JNIEnv *env, jclass type,
@@ -475,4 +478,182 @@ Java_com_yq_opencv_1image_OpencvImageUtil2_loadCascade(JNIEnv *env, jclass type,
     cascadeClassifier.load(filePath);
     LOGD("加载分类器文件成功");
     env->ReleaseStringUTFChars(filePath_, filePath);
+}
+
+//人眼检测
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectEyes(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    // 处理灰度 opencv 处理灰度图, 提高效率，一般所有的操作都会对其进行灰度处理
+    Mat gray_mat;
+    cvtColor(src, gray_mat, COLOR_BGRA2GRAY);
+    // 再次处理 直方均衡补偿
+    Mat equalize_mat;
+    equalizeHist(gray_mat, equalize_mat);
+
+    std::vector<Rect> eyes;
+    cascadeClassifier.detectMultiScale(equalize_mat, eyes, 1.1, 5);
+    LOGD("人眼个数：%d", eyes.size());
+    if (eyes.size() != 0) {
+        for (Rect faceRect : eyes) {
+            // 在眼睛部分画个图
+            rectangle(src, faceRect, Scalar(255, 155, 155), 2);
+            // 把 mat 我们又放到 bitmap 里面
+            MatToBitmap(env, src, bitmap);
+        }
+    }
+
+    return bitmap;
+
+}
+
+//笑脸检测
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectSmile(JNIEnv *env, jclass type, jstring filePath_,
+                                                       jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    // 处理灰度 opencv 处理灰度图, 提高效率，一般所有的操作都会对其进行灰度处理
+    Mat gray_mat;
+    cvtColor(src, gray_mat, COLOR_BGRA2GRAY);
+    // 再次处理 直方均衡补偿
+    Mat equalize_mat;
+    equalizeHist(gray_mat, equalize_mat);
+
+    //加载笑脸分类器
+    CascadeClassifier smilcascade;
+    const char *filePath = env->GetStringUTFChars(filePath_, 0);
+    smilcascade.load(filePath);
+    LOGD("加载分类器文件成功");
+    env->ReleaseStringUTFChars(filePath_, filePath);
+
+    // 识别人脸，也可以直接用 彩色图去做,识别人脸要加载人脸分类器文件
+    std::vector<Rect> faces;
+    cascadeClassifier.detectMultiScale(equalize_mat, faces, 1.1, 5);
+    LOGD("人脸个数：%d", faces.size());
+    if (faces.size() != 0) {
+        for (size_t i = 0; i < faces.size(); i++) {
+            // 在人脸部分画个图
+            rectangle(src, faces[i], Scalar(255, 155, 155), 8);
+
+            Mat faceROI = gray_mat(faces[i]);
+            std::vector<Rect> smiles;
+            //-- In each face, detect smile
+            smilcascade.detectMultiScale(faceROI, smiles, 1.1, 55, CASCADE_SCALE_IMAGE);
+
+            for (size_t j = 0; j < smiles.size(); j++) {
+                Rect rect(faces[i].x + smiles[j].x, faces[i].y + smiles[j].y, smiles[j].width,
+                          smiles[j].height);
+                rectangle(src, rect, Scalar(0, 255, 255), 2, 8, 0);
+            }
+            // 把 mat 我们又放到 bitmap 里面
+            MatToBitmap(env, src, bitmap);
+        }
+    }
+
+    return bitmap;
+
+}
+
+//唇部检测
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectLips(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    // 处理灰度 opencv 处理灰度图, 提高效率，一般所有的操作都会对其进行灰度处理
+    Mat gray_mat;
+    cvtColor(src, gray_mat, COLOR_BGRA2GRAY);
+    // 再次处理 直方均衡补偿
+    Mat equalize_mat;
+    equalizeHist(gray_mat, equalize_mat);
+
+    // 识别人脸，也可以直接用 彩色图去做,识别人脸要加载人脸分类器文件
+    std::vector<Rect> faces;
+    cascadeClassifier.detectMultiScale(equalize_mat, faces, 1.1, 5);
+    LOGD("人脸个数：%d", faces.size());
+    if (faces.size() != 0) {
+        for (size_t i = 0; i < faces.size(); i++) {
+            // 在人脸部分画个图
+            rectangle(src, faces[i], Scalar(255, 155, 155), 8);
+            // 把 mat 我们又放到 bitmap 里面
+            double k = 0;
+            int b=0,g=0,r=0;
+            Mat faceROI = gray_mat(faces[i]);
+            for (int row = 0; row < src.rows; ++row) {
+                for (int col = 0; col < src.cols; ++col) {
+                    Vec4b pix_n = src.at<Vec4b>(row, col);
+                    b = pix_n[0];
+                    g = pix_n[1];
+                    r = pix_n[2];
+                    //算法
+                    k = log((double)g / (pow((double)b, 0.391) * pow((double)r, 0.609)));
+                    if (k < -0.15)
+                    {
+                        //b g r a
+                        src.at<Vec4b>(row, col)[0] = static_cast<uchar>(255);
+                        src.at<Vec4b>(row, col)[1] = static_cast<uchar>(0);
+                        src.at<Vec4b>(row, col)[2] = static_cast<uchar>(255);
+                    }
+
+                }
+            }
+            MatToBitmap(env, src, bitmap);
+        }
+    }
+
+    return bitmap;
+
+}
+
+Mat result;
+//文字提取
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectWords(JNIEnv *env, jclass type, jobject bitmap) {
+
+    Mat src;
+    BitmapToMat(env, bitmap, src);
+    //这里进行图片的处理
+    //1.阈值化,腐蚀
+    threshold(src, src, 100, 255, THRESH_BINARY);
+    Mat erodeKernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+    erode(src, src, erodeKernel);
+    //2.滤波，降噪  中值滤波
+    medianBlur(src,src,7);
+    //3.种子联通法进行连通区域检测 调用java 静态方法方法
+
+//     //加载类 得到class 对象
+//    jclass jc = env->FindClass( "com/yq/opencv_image/OpencvImageUtil2");
+//    //得到对应方法的 Method 对象
+//    jmethodID jmethodID1 = env->GetMethodID(jc, "seedFill","(Lorg/opencv/core/Mat;)Lorg/opencv/core/Mat;");
+////    //3.创建对象
+////    jobject jobject1 = env->AllocObject(jc);
+////    //4.调用方法
+////    jint result = env->CallIntMethod(jobject1, jmethodID1, 99, 1);
+//    //3.调用静态方法
+//    jobject result = env->CallObjectMethod(jc,jmethodID1, src);
+
+    MatToBitmap(env, src, bitmap);
+    return bitmap;
+
+}
+
+
+extern "C"
+JNIEXPORT jobject JNICALL
+Java_com_yq_opencv_1image_OpencvImageUtil2_detectSeedFill(JNIEnv *env, jclass type,
+                                                          jobject bitmap) {
+
+    // TODO
+
 }

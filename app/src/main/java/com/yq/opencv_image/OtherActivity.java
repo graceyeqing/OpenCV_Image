@@ -24,11 +24,15 @@ import com.yq.opencv_image.utils.FileUtil;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.LinkedList;
 
 public class OtherActivity extends AppCompatActivity {
     private String TAG = "yeqing";
@@ -36,9 +40,11 @@ public class OtherActivity extends AppCompatActivity {
     private ImageView imageView;
     private ImageView imageView2;
     private final int PHOTO_REQUEST = 0;
-    private RadioGroup radioGroup,radioGroup2;
+    private RadioGroup radioGroup, radioGroup2;
     private boolean isGroup2;
     private File mCascadeFile;
+    private File mEyeCascadeFile;
+    private File smileCascadeFile;
 
     private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -80,7 +86,7 @@ public class OtherActivity extends AppCompatActivity {
         radioGroup2 = findViewById(R.id.radiogroup2);
     }
 
-    public void onClickView(View view){
+    public void onClickView(View view) {
         Bitmap src = null;
         Bitmap resultBit = null;
         if (!TextUtils.isEmpty(mPicFilePath)) {
@@ -89,10 +95,10 @@ public class OtherActivity extends AppCompatActivity {
             src = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
         }
         int id = view.getId();
-        switch (id){
+        switch (id) {
             case R.id.radio1:
-                //灰度化
-                copyCascadeFile();
+                //人脸检测
+                copyCascadeFile("haarcascade_profileface.xml");
                 if (mCascadeFile != null) {
                     OpencvImageUtil2.loadCascade(mCascadeFile.getAbsolutePath());
                 }
@@ -100,23 +106,37 @@ public class OtherActivity extends AppCompatActivity {
                 isGroup2 = false;
                 break;
             case R.id.radio2:
-                //浮雕
-                resultBit = OpencvImageUtil.relief(src);
+                //人眼检测
+                copyCascadeFile("haarcascade_eye.xml");
+                if (mEyeCascadeFile != null) {
+                    OpencvImageUtil2.loadCascade(mEyeCascadeFile.getAbsolutePath());
+                }
+                resultBit = OpencvImageUtil2.detectEyes(src);
                 isGroup2 = false;
                 break;
             case R.id.radio3:
-                //油画
-                resultBit = OpencvImageUtil.oilPaiting(src);
+                //笑脸检测
+                copyCascadeFile("haarcascade_frontalface_alt.xml");
+                copyCascadeFile("haarcascade_smile.xml");
+                if (mCascadeFile != null && smileCascadeFile != null) {
+                    OpencvImageUtil2.loadCascade(mCascadeFile.getAbsolutePath());
+                }
+                resultBit = OpencvImageUtil2.detectSmile(smileCascadeFile.getAbsolutePath(),src);
                 isGroup2 = false;
                 break;
             case R.id.radio4:
-                //轮廓图
-                resultBit = OpencvImageUtil.canary(src);
+                //唇部检测
+                copyCascadeFile("haarcascade_profileface.xml");
+                if (mCascadeFile != null) {
+                    OpencvImageUtil2.loadCascade(mCascadeFile.getAbsolutePath());
+                }
+                resultBit = OpencvImageUtil2.detectLips(src);
                 isGroup2 = false;
                 break;
             case R.id.radio5:
-                //模糊
-                resultBit = OpencvImageUtil.blur(src);
+                //文字提取
+                resultBit = OpencvImageUtil2.detectWords(src);
+//                resultBit = OpencvImageUtil2.seedFill(temp);
                 isGroup2 = false;
                 break;
             case R.id.radio6:
@@ -148,7 +168,7 @@ public class OtherActivity extends AppCompatActivity {
                 //图像叠加
                 src = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
                 Bitmap src2 = FileUtil.resourceToBitmap(OtherActivity.this, R.mipmap.test);
-                resultBit = OpencvImageUtil.add(src,src);
+                resultBit = OpencvImageUtil.add(src, src);
                 isGroup2 = true;
                 break;
             case R.id.radio12:
@@ -168,9 +188,9 @@ public class OtherActivity extends AppCompatActivity {
                 break;
 
         }
-        if(isGroup2){
+        if (isGroup2) {
             radioGroup.clearCheck();
-        }else {
+        } else {
             radioGroup2.clearCheck();
         }
         if (resultBit != null) {
@@ -180,14 +200,28 @@ public class OtherActivity extends AppCompatActivity {
         }
     }
 
-    private void copyCascadeFile(){
+    private void copyCascadeFile( String cascadeFile) {
         try {
             // load cascade file from application resources
-            InputStream inputStream = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+            InputStream inputStream;
+            FileOutputStream os;
             File cascadeDir = getDir("cascade", Context.MODE_PRIVATE);
-            mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
-            if (mCascadeFile.exists()) return;
-                    FileOutputStream os = new FileOutputStream(mCascadeFile);
+            if (cascadeFile.contains("face")) {
+                inputStream = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+                mCascadeFile = new File(cascadeDir, cascadeFile);
+                if (mCascadeFile.exists()) return;
+                os = new FileOutputStream(mCascadeFile);
+            } else if(cascadeFile.contains("eye")){
+                inputStream = getResources().openRawResource(R.raw.haarcascade_eye);
+                mEyeCascadeFile = new File(cascadeDir, cascadeFile);
+                if (mEyeCascadeFile.exists()) return;
+                os = new FileOutputStream(mEyeCascadeFile);
+            }else {
+                inputStream = getResources().openRawResource(R.raw.haarcascade_smile);
+                smileCascadeFile = new File(cascadeDir, cascadeFile);
+                if (smileCascadeFile.exists()) return;
+                os = new FileOutputStream(smileCascadeFile);
+            }
 
             byte[] buffer = new byte[4096];
             int bytesRead;
@@ -238,7 +272,8 @@ public class OtherActivity extends AppCompatActivity {
                         if (result != null && result.size() > 0) {
                             mPicFilePath = result.get(0).getPath();
                             imageView.setImageBitmap(BitmapFactory.decodeFile(mPicFilePath));
-
+                            radioGroup.clearCheck();
+                            radioGroup2.clearCheck();
                         }
                     }
                 })
@@ -251,22 +286,8 @@ public class OtherActivity extends AppCompatActivity {
                 .start();
     }
 
-    /**
-     * 调用JNI的ImageBlur(int[] pixels,int w,int h)接口实现图像模糊
-     */
 
-    public Bitmap doImageBlur(Bitmap origImage) {
-        int w = origImage.getWidth();
-        int h = origImage.getHeight();
-        int[] pixels = new int[w * h];
-        origImage.getPixels(pixels, 0, w, 0, 0, w, h);
-        int[] image = OpencvImageUtil.ImageBlur(pixels, w, h);//JNI
-        //最后将返回的int数组转为bitmap类型。
-        Bitmap desImage = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        //faceall为返回的int数组
-        desImage.setPixels(image, 0, w, 0, 0, w, h);
-        return desImage;
-    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -278,7 +299,7 @@ public class OtherActivity extends AppCompatActivity {
                         Uri uri = data.getData();
                         if (uri != null) {
                             String filePath = FileUtil.getFileAbsolutePath(this, uri);
-                            Log.d("yeqing","filePath=="+filePath);
+                            Log.d("yeqing", "filePath==" + filePath);
                             imageView.setImageBitmap(BitmapFactory.decodeFile(filePath));
                         }
                     } catch (Exception e) {

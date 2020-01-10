@@ -41,35 +41,35 @@
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="灰度化" />
+                android:text="人脸检测" />
 
             <RadioButton
                 android:id="@+id/radio2"
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="浮雕" />
+                android:text="人眼检测" />
 
             <RadioButton
                 android:id="@+id/radio3"
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="油画" />
+                android:text="笑脸检测" />
 
             <RadioButton
                 android:id="@+id/radio4"
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="轮廓图" />
+                android:text="唇部检测" />
 
             <RadioButton
                 android:id="@+id/radio5"
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="模糊" />
+                android:text="文字提取" />
 
             <RadioButton
                 android:id="@+id/radio6"
