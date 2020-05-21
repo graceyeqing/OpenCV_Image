@@ -82,7 +82,7 @@
                 android:onClick="onClickView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="马赛克" />
+                android:text="美颜" />
         </RadioGroup>
         <RadioGroup
             android:id="@+id/radiogroup2"

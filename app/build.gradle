@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-
 android {
     compileSdkVersion 29
     buildToolsVersion "29.0.2"
@@ -15,9 +14,16 @@ android {
             cmake {
                 arguments "-DOpenCV_DIR=" + project(':sdk').projectDir + "/native/jni",
                         "-DANDROID_TOOLCHAIN=clang",
+                        "-DCMAKE_BUILD_TYPE=Release",
                         "-DANDROID_STL=c++_shared"
-                targets "native-lib"
+                cppFlags "-std=c++11 -frtti -fexceptions"
+//                targets "native-lib"
             }
+        }
+        ndk {
+            //选择要添加的对应cpu类型的.so库。
+//            abiFilters 'armeabi', 'armeabi-v7a', 'armeabi-v8a', 'x86', 'x86_64'//, 'mips', 'mips64'
+            abiFilters 'armeabi-v7a'
         }
 
     }
@@ -55,4 +61,8 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.9.0'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.9.0'
     implementation 'com.github.bumptech.glide:okhttp3-integration:4.8.0'
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
 }

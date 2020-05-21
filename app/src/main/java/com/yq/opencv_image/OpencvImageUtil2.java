@@ -28,6 +28,9 @@ public class OpencvImageUtil2 {
     //图像人脸检测
     public static native Bitmap detectFace(Bitmap bitmap);
 
+    //图像人脸检测
+    public static native int[] dlibDetectFace(int[] pixels,int height,int width);
+
     //图像人眼检测
     public static native Bitmap detectEyes(Bitmap bitmap);
 
@@ -40,8 +43,31 @@ public class OpencvImageUtil2 {
     //文字提取
     public static native Bitmap detectWords(Bitmap bitmap);
 
-    //文字提取
-    public static native Bitmap detectSeedFill(Bitmap bitmap);
+    //美颜
+    public static native Bitmap beautiful(Bitmap bitmap);
+
+
+
+    public static int[] face_detection(Bitmap origin_image){
+        float scale = 240.f/ Math.max(origin_image.getHeight(), origin_image.getWidth());
+        int width = (int)(origin_image.getWidth()*scale);
+        int height = (int)(origin_image.getHeight()*scale);
+        Bitmap resize_image=Bitmap.createScaledBitmap(origin_image,width,height , false);
+
+        // 保存所有的像素的数组，图片宽×高
+        int[] pixels = new int[width * height];
+        resize_image.getPixels(pixels, 0, width, 0, 0, width, height);
+        int[] rect=dlibDetectFace(pixels,height,width);
+        int[] result_rect=new int[4];
+        result_rect[0]=(int)(rect[0]/scale);
+        result_rect[1]=(int)(rect[1]/scale);
+        result_rect[2]=(int)(rect[2]/scale);
+        result_rect[3]=(int)(rect[3]/scale);
+        result_rect[2]=result_rect[2]+result_rect[0];
+        result_rect[3]=result_rect[3]+result_rect[1];
+
+        return  result_rect;
+    }
 
     /**
      * 种子填充法进行联通区域检测

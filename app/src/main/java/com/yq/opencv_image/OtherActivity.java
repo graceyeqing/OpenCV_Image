@@ -4,6 +4,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -55,6 +58,7 @@ public class OtherActivity extends AppCompatActivity {
 
                     // Load native library after(!) OpenCV initialization
                     System.loadLibrary("native-lib");
+                    System.loadLibrary("native-lib2");
 
                 }
                 break;
@@ -141,12 +145,20 @@ public class OtherActivity extends AppCompatActivity {
                 break;
             case R.id.radio6:
                 //毛玻璃
-                resultBit = OpencvImageUtil.frostedGlass(src);
+                int[] rect=OpencvImageUtil2.face_detection(src);
+                Canvas canvas=new Canvas(resultBit);
+                Paint p=new Paint();
+                p.setColor(Color.RED);
+                p.setStrokeWidth(3.0f);
+                canvas.drawLine(rect[0], rect[1], rect[2], rect[1], p);//up
+                canvas.drawLine(rect[0], rect[1], rect[0], rect[3], p);//left
+                canvas.drawLine(rect[0], rect[3], rect[2], rect[3], p);//down
+                canvas.drawLine(rect[2], rect[1], rect[2], rect[3], p);
                 isGroup2 = false;
                 break;
             case R.id.radio7:
-                //马赛克
-                resultBit = OpencvImageUtil.mosaic(src);
+                //美颜
+                resultBit = OpencvImageUtil2.beautiful(src);
                 isGroup2 = false;
                 break;
             case R.id.radio8:

@@ -13,7 +13,7 @@ else
 endif
 
 LOCAL_MODULE    := native-lib
-LOCAL_SRC_FILES := native-lib.cpp,native-lib2.cpp
+LOCAL_SRC_FILES := native-lib.cpp,native-lib2.cpp,./dlib/dlib/all/source.cpp
 LOCAL_LDLIBS +=  -llog -ldl
 
 include $(BUILD_SHARED_LIBRARY)
